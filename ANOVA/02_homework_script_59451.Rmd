@@ -1,0 +1,174 @@
+---
+title: "02_homework_script_59451"
+author: "Alexandre Sobreira"
+date: "`r Sys.Date()`"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(skimr)
+library(readr)
+library(dplyr)
+```
+- Title: Adverse Effects of Benzodiazepines and Mood-Related Memories on Memory Recall Performance
+- Source: https://www.kaggle.com/datasets/steveahn/memory-test-on-drugged-islanders-data/discussion/135581
+  - An experiment on the effects of anti-anxiety medicine on memory recall when being primed with happy or sad memories.
+    - These drugs can impair cognition, especially memory, and can result in confusion (Breggin)
+    - observed enhanced activity during the recall of positive relative to neutral autobiographical memories (Megan)
+    - Individuals in negative moods were significantly less likely to show false memory effects (Storbeck)
+  - The variables are present in the dataset are:
+    - first_name
+    - last_name
+    - age
+    - Happy_Sad_group (Happy or sad memories)
+    - Dosage (three diferent doses)
+    - Drug (Alprazolam, Triazolam, Sugar Tablet(Placebo))        
+    - Mem_Score_Before
+    - Mem_Score_After
+    - Diff  (Mem_Score_After-Mem_Score_Before)
+- Questions:
+  1- Is there a difernce between the  anti-anxiety medicine on memory recall?
+    - If so which has the bigest impact?
+  2- Is there a difernce between the  age on memory recall?
+    - If so which has the bigest impact?
+  3- Is there a difernce between the dosage  on memory recall?
+    - If so which has the bigest impact?
+  4- How does anti-anxiety medicine affect memory recall differently by age?
+  5- How does anti-anxiety medicine affect memory recall differently by Dosage?
+
+
+# Data
+```{r}
+Islander_data <- read_csv("Islander_data.csv")
+View(Islander_data)
+attach(Islander_data)
+```
+```{r}
+str(Islander_data)
+```
+
+### Data Wrangling
+
+#### Nulls
+```{r}
+# Check for null values in df
+nulls_exist <- any(is.na(Islander_data))
+
+# Print the result
+if (nulls_exist) {
+  print("The data frame has null values.")
+} else {
+  print("The data frame does not have null values.")
+}
+```
+```{r}
+# Check for duplicates in df
+dups_exist <- any(duplicated(Islander_data))
+
+# Print the result
+if (dups_exist) {
+  print("The data frame has duplicates.")
+} else {
+  print("The data frame does not have duplicates.")
+}
+```
+- No nulls or duplicates were found.
+
+#### Data Format
+- Lets transform our variables to factors
+```{r}
+Islander_data$age <- factor(Islander_data$age)
+Islander_data$Happy_Sad_group <- factor(Islander_data$Happy_Sad_group)
+Islander_data$Dosage <- factor(Islander_data$Dosage)
+Islander_data$Drug <- factor(Islander_data$Drug)
+```
+- Lets confirm if the transformations was done correctly
+```{r}
+str(Islander_data)
+```
+- Looks good.
+
+### Data Vizualization
+
+#### Drug
+```{r}
+Islander_data %>%
+  dplyr::group_by(Drug) %>%
+  skim()
+```
+```{r}
+boxplot(Diff~Drug, data = Islander_data)
+```
+
+#### Dosage
+```{r}
+Islander_data %>%
+  dplyr::group_by(Dosage) %>%
+  skim()
+```
+```{r}
+boxplot(Diff ~ Dosage, data = Islander_data )
+```
+
+
+#### Priming
+##### Statistics
+```{r}
+Islander_data %>%
+  dplyr::group_by(Happy_Sad_group) %>%
+  skim()
+```
+##### Boxplot
+```{r}
+boxplot(Diff~Happy_Sad_group, data = Islander_data)
+```
+
+- From vizualizing the boxplots the factor with the bigest impact seems to be the drug type, with Alprazolam having the highes dispersion and highest mean of Diff
+
+##### Interaction Plot
+###### Drug-Dosage
+```{r}
+with(Islander_data, interaction.plot(Drug, Dosage, Diff, lwd = 2, col = 1:4))
+with(Islander_data, interaction.plot(Dosage, Drug, Diff, lwd = 2, col = 1:3))
+```
+There seems to be interaction between Drug and Dosage on the memory score given that lines cross while heading in
+different directions
+###### Drug-Prime
+
+```{r}
+with(Islander_data, interaction.plot(Drug, Happy_Sad_group, Diff, lwd = 2, col = 1:4))
+with(Islander_data, interaction.plot(Happy_Sad_group, Drug, Diff, lwd = 2, col = 1:3))
+```
+There seems not to be interaction between Drug and type of priming on the memory score given that lines do not cross while heading in
+equal directions
+
+
+# ANOVA 2 WAY
+```{r}
+?aov
+
+m1 <- aov(Diff ~ Dosage + Drug + Dosage*Drug, data = Islander_data)
+summary(m1)
+```
+-   Using an alpha significance of 0.05, the ANOVA analysis has shown that Dosage and Drug were significant as their p-values were 0.000118 and 3.56e-13 respectively. We also found that the interaction between the two were significant with a p-value of 1.01e-13. Lastly, the happy and sad memory block was found to be insignificant with a p-value of 0.7245429, showing that our blocking was ineffective.
+
+# Post Hoc - Tukey HSD
+
+- Within the additive model, we could do further testing about the main effects.
+```{r}
+TukeyHSD(aov(Diff ~ Drug + Dosage, data = Islander_data))
+```
+ A Tukey HSD test was used to correctly adjust for the accumulation of type 1 error alphas and found that the Sugar-Alprazolam and Triazolam-Alprazolam comparisons were to be found significant, while the Triazolmam-Sugar comparison was not significant with a p-value of 0.9623785 that provides insufficient evide that there is a meaningful difference between the two
+# Residuals Analysis
+```{r}
+par(mfrow = c(2,2))
+plot(m1)
+```
+```{r}
+shapiro.test(residuals(m1))
+```
+- Portrayed are the plotting of residuals, the normal Q-Q plot, the Standardized Residuals, and the Leverage plot. The residual plot lacks any pattern and the variance follows a pattern of constancy. The Q-Q plot shows a slight problem in normality at the tail ends, however is assumed to be sufficient given the Shapiro-Wilk test with a p-value of 3.181e-06.
