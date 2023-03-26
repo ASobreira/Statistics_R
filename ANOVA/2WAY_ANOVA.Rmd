@@ -1,0 +1,110 @@
+---
+title: "02_homework_script_59451"
+author: "Alexandre Sobreira"
+date: "`r Sys.Date()`"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(skimr)
+library(readr)
+library(dplyr)
+```
+# Data
+```{r warning=FALSE}
+Islander_data <- read_csv("Islander_data.csv")
+attach(Islander_data)
+```
+```{r}
+str(Islander_data)
+```
+
+### Data Wrangling
+
+```{r}
+# Check for null values in df
+nulls_exist <- any(is.na(Islander_data))
+
+# Print the result
+if (nulls_exist) {
+  print("The data frame has null values.")
+} else {
+  print("The data frame does not have null values.")
+}
+```
+```{r}
+# Check for duplicates in df
+dups_exist <- any(duplicated(Islander_data))
+
+# Print the result
+if (dups_exist) {
+  print("The data frame has duplicates.")
+} else {
+  print("The data frame does not have duplicates.")
+}
+```
+
+#### Data Format
+- Lets transform our variables to factors
+```{r}
+Islander_data$age <- factor(Islander_data$age)
+Islander_data$Happy_Sad_group <- factor(Islander_data$Happy_Sad_group)
+Islander_data$Dosage <- factor(Islander_data$Dosage)
+Islander_data$Drug <- factor(Islander_data$Drug)
+```
+
+```{r}
+str(Islander_data)
+```
+### Data Vizualization
+
+#### Drug
+```{r}
+Islander_data %>%
+  dplyr::group_by(Drug) %>%
+  skim()
+```
+```{r}
+boxplot(Diff~Drug, data = Islander_data)
+```
+
+#### Dosage
+```{r}
+Islander_data %>%
+  dplyr::group_by(Dosage) %>%
+  skim()
+```
+```{r}
+boxplot(Diff ~ Dosage, data = Islander_data )
+```
+
+##### Interaction Plot
+```{r}
+with(Islander_data, interaction.plot(Drug, Dosage, Diff, lwd = 2, col = 1:4))
+with(Islander_data, interaction.plot(Dosage, Drug, Diff, lwd = 2, col = 1:3))
+```
+There seems to be interaction between Drug and Dosage on the memory score given that lines cross while heading in
+different directions
+
+# ANOVA 2 WAY
+```{r}
+m1 <- aov(Diff ~ Dosage + Drug + Dosage*Drug, data = Islander_data)
+summary(m1)
+```
+# Post Hoc - Tukey HSD
+```{r}
+TukeyHSD(aov(Diff ~ Drug + Dosage, data = Islander_data))
+```
+# Residuals Analysis
+```{r}
+par(mfrow = c(2,2))
+plot(m1)
+```
+```{r}
+shapiro.test(residuals(m1))
+```
+
