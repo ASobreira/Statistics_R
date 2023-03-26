@@ -1,0 +1,112 @@
+---
+title: "01_homework"
+author: "Alexandre Sobreira"
+date: "`r Sys.Date()`"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(skimr)
+library(readr)
+library(dplyr)
+```
+
+# One Sample & Two independent samples
+```{r}
+ds_calories <- read_csv("kid_calories.csv") # call CSV
+ds_calories <- data.frame(ds_calories) # Into dataframe
+colnames(ds_calories)[1] <- "Condition" # Change 1st collumn name
+head(ds_calories)
+tail(ds_calories)
+attach(ds_calories) # attach to avoid using "$"
+```
+## Sample Characteristics and Adjustment Test
+```{r}
+skim(Calories[Condition==1])
+skim(Calories[Condition==2])
+```
+
+```{r}
+boxplot(Calories~Condition)
+```
+```{r}
+shapiro.test(Calories[Condition==1])
+shapiro.test(Calories[Condition==2])
+```
+```{r}
+scaled_condition01<- scale(Calories[Condition==1])
+scaled_condition02<- scale(Calories[Condition==2])
+qqnorm(scaled_condition01); qqline(scaled_condition01)
+qqnorm(scaled_condition02); qqline(scaled_condition02)
+```
+## Independent T Test
+
+```{r}
+var.test(Calories~Condition)
+```
+```{r}
+t.test(Calories~Condition, paired = FALSE, var.equal = TRUE, alternative = "two.sided", conf.level = .95)
+```
+## One sample T Test
+```{r}
+t.test(Calories[Condition==1], mu = 400, alternative = "greater") 
+```
+```{r}
+## Only for the C.I
+t.test(Calories[Condition==1])
+```
+# Paired Samples
+```{r}
+no_caffeine <- c(36.05, 52.47, 56.55, 45.2, 35.25, 66.38, 40.57, 57.15, 28.34)
+caffeine_13mg <- c(37.55, 59.3, 79.12, 58.33, 70.54, 69.47, 46.48, 66.35, 36.2)
+ds03 <- data.frame(no_caffeine, caffeine_13mg)
+```
+
+## Sample Characteristics and Adjustment Test
+```{r}
+skim(no_caffeine)
+skim(caffeine_13mg)
+```
+
+
+```{r}
+boxplot(no_caffeine, caffeine_13mg, 
+        names=c("no caffeine", "13 mg of caffeine"),
+        ylab="Endurance times", 
+        col=c("snow", "snow"))
+```
+
+
+```{r}
+hist(no_caffeine)
+hist(caffeine_13mg)
+```
+
+
+```{r}
+scaled_no_caffeine <- scale(no_caffeine)
+scaled_caffeine_13mg <- scale(caffeine_13mg)
+qqnorm(scaled_caffeine_13mg); qqline(scaled_caffeine_13mg)
+qqnorm(scaled_no_caffeine); qqline(scaled_no_caffeine)
+```
+
+```{r}
+shapiro.test(caffeine_13mg)
+shapiro.test(no_caffeine)
+```
+## Paired Sample T Test
+```{r}
+t.test(caffeine_13mg, no_caffeine, paired = TRUE)
+
+# OR 
+
+d = caffeine_13mg - no_caffeine 
+t.test(d)
+```
+
+
+
